@@ -16,103 +16,70 @@ KEY = b''   # key size = 16 bytes = 128 bits
 
 # --- E/D Functions ---
 
-def call_ccm_encrypt(target_file):
+def encrypt(target_file,mode):
     # get plaintext
     with open(target_file, 'rb') as f:
         plaintext = f.read()
 
     # nonce pycryptodome CCM 會自動產生 random 11 bytes 
-    cipher = AES.new(KEY, AES.MODE_CCM)
+    if mode == 'CCM encrypt':
+        cipher = AES.new(KEY, AES.MODE_CCM)
+    else:
+        cipher = AES.new(KEY, AES.MODE_GCM)
     
     # ciphertext, tag (MAC)
     ciphertext, tag = cipher.encrypt_and_digest(plaintext) # return a tuple (ciphertext, tag)
     
     # nonce + tag + ciphertext
     # pycryptodome CCM 預設 nonce 長度 11 bytes, Tag  16 bytes
-    output_file = target_file + ".ccm"
+    if mode == 'CCM encrypt':
+        output_file = target_file + ".ccm"
+    else:
+        output_file = target_file + ".gcm"
     with open(output_file, 'wb') as f:
         # 解密時要照相同順序
         f.write(cipher.nonce) # nonce
         f.write(tag)          # tag (MAC)
         f.write(ciphertext)   # ciphertext
 
-    messagebox.showinfo("successful", f"Encrypt complete \nFile save as: {output_file}")
+    messagebox.showinfo("successful", f"{mode} complete \nFile save as: {output_file}")
 
-def call_ccm_decrypt(target_file):
+def decrypt(target_file,mode):
     try:
         # get ciphertext
         with open(target_file, 'rb') as f:
             # 注意順序
-            nonce = f.read(11) # nonce (11 bytes)
+            if mode == 'CCM decrypt':
+                nonce = f.read(11) # CCM 預設 nonce 11 bytes
+            else:
+                nonce = f.read(16) # GCM 預設 nonce 16 bytes
             tag = f.read(16)   # tag (16 bytes)
             ciphertext = f.read() # ciphertext
 
         # decrypt 要給定 ciphertext 的那組 tag 來做驗證
-        cipher = AES.new(KEY, AES.MODE_CCM, nonce=nonce)
+        if mode == 'CCM decrypt':
+            cipher = AES.new(KEY, AES.MODE_CCM, nonce=nonce)
+        else :
+            cipher = AES.new(KEY, AES.MODE_GCM, nonce=nonce)
         
         # decrypt ciphertext and verify tag (MAC) 
         plaintext = cipher.decrypt_and_verify(ciphertext, tag)
         
         filename_without_enc_ext = os.path.splitext(target_file)[0]
         root_name, original_ext = os.path.splitext(filename_without_enc_ext)
-        output_file = f"{root_name}_ccm_decrypted{original_ext}"
+        if mode == 'CCM decrypt':
+            output_file = f"{root_name}_ccm_decrypted{original_ext}"
+        else :
+            output_file = f"{root_name}_gcm_decrypted{original_ext}"
         with open(output_file, 'wb') as f:
             f.write(plaintext)
 
-        messagebox.showinfo("successful", f"Decrypt complete \nFile saved as: {output_file}")
+        messagebox.showinfo("successful", f"{mode} complete \nFile saved as: {output_file}")
         
     except ValueError:
         messagebox.showerror("Error", "MAC Check Failed \nThe file may have been altered or the key may be incorrect.")
     except Exception as e:
         messagebox.showerror("Error", str(e))
-
-def call_gcm_encrypt(target_file):
-    # get plaintext
-    with open(target_file, 'rb') as f:
-        plaintext = f.read()
-
-    # nonce pycryptodome GCM 會自動產生 random 16 bytes 
-    cipher = AES.new(KEY, AES.MODE_GCM)
-    
-    
-    ciphertext, tag = cipher.encrypt_and_digest(plaintext)
-    
-    # Nonce + Tag + Ciphertext
-    output_file = target_file + ".gcm"
-    with open(output_file, 'wb') as f:
-        f.write(cipher.nonce)
-        f.write(tag)
-        f.write(ciphertext)
-
-    messagebox.showinfo("successful", f"Encrypt complete \nFile save as: {output_file}")
-
-def call_gcm_decrypt(target_file):
-    try:
-        # get ciphertext
-        with open(target_file, 'rb') as f:
-            nonce = f.read(16) # pycryptodome GCM 預設 nonce 16 bytes
-            tag = f.read(16)
-            ciphertext = f.read()
-
-        # decrypt 要給定 ciphertext 的那組 tag 來做驗證
-        cipher = AES.new(KEY, AES.MODE_GCM, nonce=nonce)
-        
-        # decrypt ciphertext and verify tag (MAC)
-        plaintext = cipher.decrypt_and_verify(ciphertext, tag) # return a tuple (ciphertext, tag)
-        
-        filename_without_enc_ext = os.path.splitext(target_file)[0]
-        root_name, original_ext = os.path.splitext(filename_without_enc_ext)
-        output_file = f"{root_name}_gcm_decrypted{original_ext}"
-        with open(output_file, 'wb') as f:
-            f.write(plaintext)
-
-        messagebox.showinfo("successful", f"Decrypt complete \nFile saved as: {output_file}")
-
-    except ValueError:
-        messagebox.showerror("error", "MAC Check Failed \nThe file may have been altered or the key may be incorrect.")
-    except Exception as e:
-        messagebox.showerror("error", str(e))
-
 
 
 def select_file():
@@ -127,26 +94,24 @@ def select_file():
         pass
 
 def run_crypto():
-    # get path
+    # -- get file --
     target_file = file_path_var.get()
-    
     
     selected_mode = combo_mode.get() # 加解密模式
     password = password_entry.get() # 使用者輸入密碼
 
+    # -- basic checking --
     if not password:
         messagebox.showwarning("error", "No password entry")
         return
-    
-    # basic checking
     if target_file == "Files not yet selected" or not target_file:
         messagebox.showwarning("warning", "Please select a file first")
         return
-    
     if not selected_mode:
         messagebox.showwarning("warning", "Please select an Enctypt/Decrypt mode")
         return
     
+    # -- hash(password)  (SHA-256) --
     hash_key = hashlib.sha256()
     hash_key.update(password.encode('utf-8'))
     global KEY # 宣告全域變數
@@ -154,21 +119,15 @@ def run_crypto():
 
     # -- AES function call --
     try:
-        if selected_mode == "CCM encrypt":
-            call_ccm_encrypt(target_file) 
+        if selected_mode == "CCM encrypt" or selected_mode == "GCM encrypt":
+            encrypt(target_file,selected_mode) 
             
-        elif selected_mode == "CCM decrypt":
-            call_ccm_decrypt(target_file)
-            
-        elif selected_mode == "GCM encrypt":
-            call_gcm_encrypt(target_file)
-            
-        elif selected_mode == "GCM decrypt":
-            call_gcm_decrypt(target_file)
+        elif selected_mode == "CCM decrypt" or selected_mode == "GCM decrypt":
+            decrypt(target_file,selected_mode)
         
-    except Exception as e:
+    except Exception:
         # 非預期錯誤
-        messagebox.showerror("System Error", f"{str(e)}")
+        messagebox.showerror("System Error", f"{str(Exception)}")
 
 
 # --- tkinter window ---
