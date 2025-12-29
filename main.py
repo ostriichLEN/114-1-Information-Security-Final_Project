@@ -1,18 +1,17 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
+
 import os
 
 # pip install pycryptodome
 from Crypto.Cipher import AES
-from Crypto.Random import get_random_bytes
+# from Crypto.Random import get_random_bytes
 
-import hashlib 
-
-# -- 使用者輸入密碼產生並輸入進 hash function --
+import hashlib # using SHA-256
 
 # -- encrypt key KEY setup --
 # user input the password -> hash(password) to obatin a 128 bit output 
-KEY = b'1234567890123456'   # key size = 16 bytes = 128 bits
+KEY = b''   # key size = 16 bytes = 128 bits
 
 
 # --- E/D Functions ---
@@ -26,7 +25,7 @@ def call_ccm_encrypt(target_file):
     cipher = AES.new(KEY, AES.MODE_CCM)
     
     # ciphertext, tag (MAC)
-    ciphertext, tag = cipher.encrypt_and_digest(plaintext)
+    ciphertext, tag = cipher.encrypt_and_digest(plaintext) # return a tuple (ciphertext, tag)
     
     # nonce + tag + ciphertext
     # pycryptodome CCM 預設 nonce 長度 11 bytes, Tag  16 bytes
@@ -99,7 +98,7 @@ def call_gcm_decrypt(target_file):
         cipher = AES.new(KEY, AES.MODE_GCM, nonce=nonce)
         
         # decrypt ciphertext and verify tag (MAC)
-        plaintext = cipher.decrypt_and_verify(ciphertext, tag)
+        plaintext = cipher.decrypt_and_verify(ciphertext, tag) # return a tuple (ciphertext, tag)
         
         filename_without_enc_ext = os.path.splitext(target_file)[0]
         root_name, original_ext = os.path.splitext(filename_without_enc_ext)
