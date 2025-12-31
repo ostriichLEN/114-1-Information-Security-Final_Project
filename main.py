@@ -32,6 +32,7 @@ def encrypt(target_file,mode):
     
     # nonce + tag + ciphertext
     # pycryptodome CCM 預設 nonce 長度 11 bytes, Tag  16 bytes
+    # pycryptodome GCM 預設 nonce 長度 16 bytes, Tag  16 bytes
     if mode == 'CCM encrypt':
         output_file = target_file + ".ccm"
     else:
