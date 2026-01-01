@@ -5,13 +5,14 @@ import os
 
 # pip install pycryptodome
 from Crypto.Cipher import AES
+from Crypto.Hash import SHA256
 # from Crypto.Random import get_random_bytes
 
-import hashlib # using SHA-256
+# import hashlib # using SHA-256
 
 # -- encrypt key KEY setup --
-# user input the password -> hash(password) to obatin a 128 bit output 
-KEY = b''   # key size = 16 bytes = 128 bits
+# user input the password -> hash(password) to obatin a 256 bit output 
+KEY = b''   # key size 256 bits
 
 
 # --- E/D Functions ---
@@ -113,7 +114,7 @@ def run_crypto():
         return
     
     # -- hash(password)  (SHA-256) --
-    hash_key = hashlib.sha256()
+    hash_key = SHA256.new()
     hash_key.update(password.encode('utf-8'))
     global KEY # 宣告全域變數
     KEY = hash_key.digest()
