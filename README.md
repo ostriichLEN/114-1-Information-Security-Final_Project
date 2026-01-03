@@ -1,6 +1,6 @@
 # 114-1-Information-Security-Final_Project
 ![alt text](image.png)
-## 程式結構
+## Class Diagram
 ```mermaid
 classDiagram
     direction TB
@@ -18,8 +18,8 @@ classDiagram
     <<External>> Libraries
     Libraries : - tkinter
     Libraries : - os
-    Libraries : - hashlib_SHA256
     Libraries : - Crypto_Cipher_AES
+    Libraries : - Crypto_Cipher_SHA256
 
     
     AES_Tool_Script ..> Libraries : Imports
